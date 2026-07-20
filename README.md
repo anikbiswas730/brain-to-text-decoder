@@ -1,5 +1,7 @@
 # Brain-to-Text: Hybrid LSTM-Transformer CTC Decoder
 
+![B-T-S Pipeline Architecture](B-T-S%20pipeline.jpg)
+
 Neural-speech decoding pipeline for the Kaggle **[brain-to-text-25](https://www.kaggle.com/competitions/brain-to-text-25)**
 competition: a hybrid CNN + BiLSTM + Transformer acoustic model trained with
 CTC loss, decoded with a KenLM n-gram language model, and rescored with a
