@@ -1,0 +1,20 @@
+# Core
+torch>=2.1
+numpy
+pandas
+scipy
+h5py
+tqdm
+matplotlib
+
+# Evaluation
+jiwer
+
+# LM rescoring / decoding pipeline (decode_llm.py)
+transformers>=4.40
+accelerate            # required for device_map="auto" when loading the LLM
+pyctcdecode
+kenlm                  # python bindings; also run scripts/build_kenlm.sh for the CLI tools
+
+# Optional: enables loading the rescoring LLM in 8-bit to save VRAM
+bitsandbytes

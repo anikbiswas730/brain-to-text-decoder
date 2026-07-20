@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# Checkpoints & training artifacts
+checkpoints/*
+!checkpoints/.gitkeep
+
+# KenLM build + LM artifacts
+kenlm/
+lm.arpa
+lm_fixed.arpa
+lm.binary
+lm_corpus.txt
+
+# Submission / output files
+submission*.csv
+
+# Data (never commit the actual competition data)
+data/
+*.hdf5
+
+# Environment
+.venv/
+venv/
+.env
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
