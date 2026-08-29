@@ -1,24 +1,18 @@
 """
-Data augmentation, HDF5 loading, and the PyTorch Dataset for the
-Brain-to-Text neural recordings.
+src/dataset.py — HDF5 data loading, neural augmentation, the phoneme-target
+Dataset, its collate function, and streaming (Welford) per-channel
+normalization statistics.
 
-Expects the Kaggle "brain-to-text-25" competition layout:
-    <data_dir>/<session_name>/data_train.hdf5
-    <data_dir>/<session_name>/data_val.hdf5
-    <data_dir>/<session_name>/data_test.hdf5
-
-Each HDF5 file contains one group per trial, with:
-    trial['input_features']       -> [T, 512] neural feature array
-    trial.attrs['n_time_steps']   -> valid length T (features may be padded)
-    trial.attrs['sentence_label'] -> ground-truth sentence (train/val only)
-    trial.attrs['block_num'], trial.attrs['trial_num']
-    trial['seq_class_ids'], trial.attrs['seq_len'] -> optional phoneme labels
+Targets are phoneme IDs read directly from each trial's ``seq_class_ids``;
+normalization stats are computed once on TRAIN and reused unchanged for
+val/test so the day-adaptive input layer sees a stable input scale.
 """
 
 import random
 from glob import glob
 from pathlib import Path
 
+import numpy as np
 import h5py
 import torch
 from torch.utils.data import Dataset
@@ -27,8 +21,7 @@ from tqdm import tqdm
 
 
 class NeuralAugmentation:
-    """Light augmentation for neural time-series: time warping, additive
-    Gaussian noise, and random channel dropout."""
+    """Light stochastic augmentation: time-warp, additive noise, channel dropout."""
 
     def __init__(self, p=0.5):
         self.p = p
@@ -64,12 +57,9 @@ class NeuralAugmentation:
 
 
 def load_split(data_dir, split='train'):
-    """Loads every trial for a given split ('train' | 'val' | 'test') across
-    all session directories into memory as a dict of lists."""
-    pattern = f'{data_dir}/**/data_{split}.hdf5'
-    files = sorted(glob(pattern, recursive=True))
-
-    print(f"\nLoading {split} split...")
+    """Load every trial of a split into memory as parallel lists."""
+    files = sorted(glob(f'{data_dir}/**/data_{split}.hdf5', recursive=True))
+    print(f"\nLoading {split} split ...")
     all_data = {k: [] for k in ['neural', 'n_steps', 'sentence', 'phonemes',
                                  'phoneme_len', 'session', 'block', 'trial']}
     for filepath in tqdm(files):
@@ -84,42 +74,51 @@ def load_split(data_dir, split='train'):
                 all_data['trial'].append(trial.attrs['trial_num'])
 
                 sentence = trial.attrs.get('sentence_label')
-                all_data['sentence'].append(sentence.decode('utf-8') if isinstance(sentence, bytes) else sentence)
+                all_data['sentence'].append(
+                    sentence.decode('utf-8') if isinstance(sentence, bytes) else sentence)
 
-                all_data['phonemes'].append(trial.get('seq_class_ids')[:] if 'seq_class_ids' in trial else None)
-                all_data['phoneme_len'].append(trial.attrs.get('seq_len'))
-    print(f"\u2713 Loaded {len(all_data['neural'])} samples")
+                phon = trial['seq_class_ids'][:] if 'seq_class_ids' in trial \
+                    else np.array([], dtype=np.int64)
+                phon_len = int(trial.attrs['seq_len']) if 'seq_len' in trial.attrs else len(phon)
+                all_data['phonemes'].append(phon)
+                all_data['phoneme_len'].append(phon_len)
+    print(f"Loaded {len(all_data['neural'])} samples")
     return all_data
 
 
-class BrainToTextDataset(Dataset):
-    """Wraps loaded neural/sentence data, handling normalization,
-    augmentation, and character-level tokenization."""
+def compute_channel_stats(data):
+    """Streaming (Welford) per-channel mean/std over every TRAIN timestep."""
+    n_channels = data['neural'][0].shape[1]
+    count = 0
+    mean = np.zeros(n_channels, dtype=np.float64)
+    M2 = np.zeros(n_channels, dtype=np.float64)
+    for feat, n_steps in zip(data['neural'], data['n_steps']):
+        x = feat[:n_steps].astype(np.float64)
+        for row in x:
+            count += 1
+            delta = row - mean
+            mean += delta / count
+            M2 += delta * (row - mean)
+    std = np.sqrt(M2 / max(count - 1, 1))
+    std[std < 1e-6] = 1e-6
+    return (torch.tensor(mean, dtype=torch.float32),
+            torch.tensor(std, dtype=torch.float32))
 
-    def __init__(self, data, session2idx, char2idx=None, normalize=True, augment=False):
+
+class BrainToTextDataset(Dataset):
+    def __init__(self, data, session2idx, feat_mean, feat_std, augment=False, clip=5.0):
         self.neural = data['neural']
         self.n_steps = data['n_steps']
         self.sentences = data['sentence']
         self.sessions = data['session']
+        self.phonemes = data['phonemes']
+        self.phoneme_len = data['phoneme_len']
         self.session2idx = session2idx
-        self.normalize = normalize
+        self.feat_mean = feat_mean
+        self.feat_std = feat_std
+        self.clip = clip
         self.augment = augment
         self.augmentation = NeuralAugmentation(p=0.5) if augment else None
-
-        self.char2idx = char2idx if char2idx is not None else self._build_vocab()
-        self.idx2char = {v: k for k, v in self.char2idx.items()}
-        self.vocab_size = len(self.char2idx)
-
-    def _build_vocab(self):
-        chars = set()
-        for sent in self.sentences:
-            if sent:
-                chars.update(sent.lower())
-        chars = sorted(list(chars))
-        char2idx = {'<BLANK>': 0}
-        for i, ch in enumerate(chars, start=1):
-            char2idx[ch] = i
-        return char2idx
 
     def __len__(self):
         return len(self.neural)
@@ -128,26 +127,28 @@ class BrainToTextDataset(Dataset):
         neural = self.neural[idx][:self.n_steps[idx]]
         neural = torch.FloatTensor(neural)
 
-        if self.normalize:
-            neural = (neural - neural.mean()) / (neural.std() + 1e-8)
+        # Global, split-independent normalization (same stats for train/val/test).
+        neural = (neural - self.feat_mean) / self.feat_std
+        neural = torch.clamp(neural, -self.clip, self.clip)
+
         if self.augment and self.augmentation:
             neural = self.augmentation(neural)
 
-        sentence = self.sentences[idx] if self.sentences[idx] else ""
-        target = [self.char2idx.get(ch.lower(), 0) for ch in sentence]
+        target = torch.LongTensor(self.phonemes[idx])
+        target_length = self.phoneme_len[idx]
 
         return {
             'neural': neural,
-            'target': torch.LongTensor(target),
+            'target': target,
             'length': len(neural),
-            'target_length': len(target),
-            'sentence': sentence,
-            'day_idx': self.session2idx[self.sessions[idx]]
+            'target_length': target_length,
+            'sentence': self.sentences[idx] if self.sentences[idx] else "",
+            'day_idx': self.session2idx[self.sessions[idx]],
         }
 
 
 def collate_fn(batch):
-    """Pads a batch of variable-length neural sequences/targets."""
+    """Sort by length (for pack_padded_sequence) and pad neural + target tensors."""
     batch = sorted(batch, key=lambda x: x['length'], reverse=True)
     neurals = pad_sequence([item['neural'] for item in batch], batch_first=True)
     targets = pad_sequence([item['target'] for item in batch], batch_first=True)
@@ -157,37 +158,5 @@ def collate_fn(batch):
         'lengths': torch.LongTensor([item['length'] for item in batch]),
         'target_lengths': torch.LongTensor([item['target_length'] for item in batch]),
         'sentences': [item['sentence'] for item in batch],
-        'day_idx': torch.LongTensor([item['day_idx'] for item in batch])
+        'day_idx': torch.LongTensor([item['day_idx'] for item in batch]),
     }
-
-
-def load_test_samples(data_dir, session2idx):
-    """Loads the test split into the flat sample-dict format used by the
-    prediction/decoding scripts (as opposed to the batched Dataset above,
-    since test-time inference iterates over samples directly)."""
-    pattern = f'{data_dir}/**/data_test.hdf5'
-    files = sorted(glob(pattern, recursive=True))
-
-    all_samples = []
-    sample_id = 0
-    for filepath in tqdm(files, desc="Loading test HDF5"):
-        session = Path(filepath).parent.name
-        with h5py.File(filepath, 'r') as f:
-            trial_keys = [k for k in f.keys() if 'trial' in k.lower()]
-            for trial_key in trial_keys:
-                trial = f[trial_key]
-                if 'input_features' not in trial:
-                    continue
-                features = trial['input_features'][:trial.attrs['n_time_steps']]
-                features = (features - features.mean(axis=0)) / (features.std(axis=0) + 1e-8)
-                import numpy as np
-                features = np.clip(features, -5, 5)
-                all_samples.append({
-                    'id': sample_id,
-                    'session': session,
-                    'day_idx': session2idx[session],
-                    'trial_key': trial_key,
-                    'features': torch.FloatTensor(features)
-                })
-                sample_id += 1
-    return all_samples

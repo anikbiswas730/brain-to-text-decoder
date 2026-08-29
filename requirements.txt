@@ -1,20 +1,28 @@
-# Core
+# Core deep learning
 torch>=2.1
-numpy
-pandas
-scipy
-h5py
-tqdm
-matplotlib
+torchaudio>=2.1          # provides the flashlight-backed CTC beam-search decoder
 
-# Evaluation
-jiwer
+# Neural-data IO & signal processing
+h5py>=3.8
+numpy>=1.24
+pandas>=2.0
+scipy>=1.10
 
-# LM rescoring / decoding pipeline (decode_llm.py)
-transformers>=4.40
-accelerate            # required for device_map="auto" when loading the LLM
-pyctcdecode
-kenlm                  # python bindings; also run scripts/build_kenlm.sh for the CLI tools
+# Metrics
+jiwer>=3.0
+editdistance>=0.6
 
-# Optional: enables loading the rescoring LLM in 8-bit to save VRAM
-bitsandbytes
+# Beam search backend (flashlight-text powers torchaudio.models.decoder.ctc_decoder)
+flashlight-text>=0.0.7
+
+# LLM rescoring (4-bit quantized Qwen2.5-7B)
+transformers>=4.44
+accelerate>=0.33
+bitsandbytes>=0.43
+
+# Utilities
+tqdm>=4.66
+matplotlib>=3.7
+
+# Optional: only needed if resolving datasets via kagglehub instead of local paths
+kagglehub>=0.3

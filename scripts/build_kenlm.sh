@@ -1,37 +1,43 @@
 #!/usr/bin/env bash
-# Builds the KenLM command-line binaries (lmplz, build_binary) used to train
-# and package the n-gram language model for pyctcdecode.
+# ===========================================================================
+# build_kenlm.sh — OPTIONAL. Build the KenLM CLI tools (lmplz, build_binary)
+# from source so you can train a fresh n-gram binary from a text corpus.
 #
-# Run this once before using decode_llm.py:
+# The default pipeline does NOT need this: decode_llm.py / evaluate.py load a
+# prebuilt 4-gram KenLM *.bin (plus lexicon.txt / tokens.txt) that is resolved
+# from an attached Kaggle dataset (see KENLM_DATASET_SLUG in config.py) or from
+# the --kenlm_binary / --lexicon / --tokens flags. Only run this if you want to
+# rebuild that binary yourself.
+#
+# Usage:
 #   bash scripts/build_kenlm.sh
-#
-# Requires: apt (Debian/Ubuntu), cmake, a C++ toolchain. On Kaggle/Colab this
-# just works out of the box; on a bare Linux box you may need `sudo` in
-# front of the apt-get commands below.
-
+#   # then, e.g., build a 4-gram model from a one-sentence-per-line corpus:
+#   ./kenlm/build/bin/lmplz -o 4 < corpus.txt > model.arpa
+#   ./kenlm/build/bin/build_binary model.arpa model.bin
+# ===========================================================================
 set -euo pipefail
 
-echo "Installing build dependencies..."
-apt-get update -qq
-apt-get install -y -qq \
-    build-essential cmake \
-    libboost-all-dev libboost-program-options-dev libboost-thread-dev \
-    libbz2-dev liblzma-dev
-
-echo "Fetching KenLM source..."
-rm -rf kenlm
-wget -q -O - https://kheafield.com/code/kenlm.tar.gz | tar xz
-
-echo "Building KenLM (lmplz, build_binary)..."
-mkdir -p kenlm/build
-cd kenlm/build
-cmake .. > /dev/null
-make -j"$(nproc)" > /dev/null
-
-KENLM_BIN="$(pwd)/bin"
-if [ ! -f "${KENLM_BIN}/lmplz" ]; then
-    echo "ERROR: lmplz build failed - check CMake/make output above." >&2
-    exit 1
+echo "Installing KenLM build dependencies (Debian/Ubuntu) ..."
+if command -v apt-get >/dev/null 2>&1; then
+  sudo apt-get update -y
+  sudo apt-get install -y build-essential cmake libboost-all-dev \
+       libbz2-dev liblzma-dev zlib1g-dev
+else
+  echo "apt-get not found; install cmake + boost + bzip2/lzma/zlib headers manually."
 fi
 
-echo "KenLM binaries ready at: ${KENLM_BIN}"
+if [ ! -d kenlm ]; then
+  echo "Cloning KenLM ..."
+  git clone https://github.com/kpu/kenlm.git
+fi
+
+echo "Building KenLM ..."
+mkdir -p kenlm/build
+cd kenlm/build
+cmake ..
+make -j"$(nproc)"
+
+echo ""
+echo "Done. Binaries are in kenlm/build/bin/ (lmplz, build_binary)."
+echo "Also install the python bindings if you want to query models in Python:"
+echo "    pip install https://github.com/kpu/kenlm/archive/master.zip"
