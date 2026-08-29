@@ -5,8 +5,8 @@ hyperparameter used across training, decoding and LLM rescoring.
 The decoding / LLM defaults below are the BEST combination found by the
 validation sweep in the original notebook:
 
-    lm_weight (KenLM)     = 4.0
-    llm_fusion_weight (λ) = 0.5
+    lm_weight (KenLM)     = 4.5
+    llm_fusion_weight (λ) = 0.75
     rescoring LLM         = Qwen/Qwen2.5-7B (4-bit nf4)
     beam_width / n-best   = 250 / 30
     gate percentiles      = 1 (incoherent) / 75 (already-confident)
@@ -111,12 +111,12 @@ CONFIG = {
 DECODING = {
     'beam_width': 250,
     'nbest': 30,
-    'lm_weight': 4.0,           # KenLM weight (best confirmed point of the sweep)
+    'lm_weight': 4.5,           # KenLM weight (best confirmed point of the sweep)
     'word_score': 0.0,
     'decode_batch': 16,
 
     'llm_name': 'Qwen/Qwen2.5-7B',
-    'llm_fusion_weight': 0.5,   # base fusion λ (best); margin-adaptive at inference
+    'llm_fusion_weight': 0.75,   # base fusion λ (best); margin-adaptive at inference
 
     # confidence gate percentiles
     'llm_gate_percentile': 1,          # skip only clearly incoherent trials
