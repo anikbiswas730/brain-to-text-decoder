@@ -3,7 +3,7 @@
 predict.py — fast baseline submission: greedy CTC phoneme decode -> words via
 lexicon exact-match, no beam search, no KenLM, no LLM.
 
-This is the quick sanity path. For the accurate (7.62% WER) submission use
+This is the quick sanity path. For the accurate (7.55% WER) submission use
 decode_llm.py.
 
 Example

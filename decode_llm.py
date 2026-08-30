@@ -7,7 +7,7 @@ decode_llm.py — the accurate submission pipeline.
     -> margin-adaptive, verbatim-conditioned Qwen2.5-7B SCORE FUSION (λ=0.5)
     -> submission.csv
 
-Validation result of this exact pipeline: WER 7.62% / CER 5.31% / PER 12.12%.
+Validation result of this exact pipeline: WER 7.55% / CER 5.31%.
 
 The gate thresholds are calibrated on the VALIDATION set (which has ground
 truth) and reused on the test set, since the decoder's score scale is stable

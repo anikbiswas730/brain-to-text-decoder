@@ -11,7 +11,7 @@ validation sweep in the original notebook:
     beam_width / n-best   = 250 / 30
     gate percentiles      = 1 (incoherent) / 75 (already-confident)
 
-  ->  validation  WER 7.62%  |  CER 5.31%  |  PER 12.12%
+  ->  validation  WER 7.55%  |  CER 5.31%
 
 Every entry-point script (train.py / predict.py / decode_llm.py / evaluate.py)
 imports from here and lets the CLI override a subset of these values.
@@ -116,7 +116,7 @@ DECODING = {
     'decode_batch': 16,
 
     'llm_name': 'Qwen/Qwen2.5-7B',
-    'llm_fusion_weight': 0.75,   # base fusion λ (best); margin-adaptive at inference
+    'llm_fusion_weight': 0.75,  # base fusion λ (best); margin-adaptive at inference
 
     # confidence gate percentiles
     'llm_gate_percentile': 1,          # skip only clearly incoherent trials

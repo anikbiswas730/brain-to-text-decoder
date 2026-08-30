@@ -15,17 +15,14 @@ original single Kaggle notebook (`notebooks/iccit-brain-to-text-hybrid-qwen2-5-7
 
 ## Results (validation set)
 
-| Stage | WER | CER | PER |
-| ----- | --: | --: | --: |
-| CTC-greedy (acoustic only) | — | — | **12.12%** |
-| Beam + KenLM (no LLM) | 7.71% | 5.43% | — |
-| **Beam + KenLM + Qwen2.5-7B fusion** | **7.62%** | **5.31%** | — |
+| Stage | WER | CER |
+| ----- | --: | --: |
+| Beam + KenLM (no LLM) | 7.71% | 5.38% |
+| **Beam + KenLM + Qwen2.5-7B fusion** | **7.55%** | **5.31%** |
 
 Best decoding configuration (pinned as defaults in `config.py`):
-`lm_weight = 4.0`, fusion `λ = 0.5`, beam width `250`, n-best `30`, gate
+`lm_weight = 4.5`, fusion `λ = 0.75`, beam width `250`, n-best `30`, gate
 percentiles `1 / 75`, rescoring LLM `Qwen/Qwen2.5-7B` (4-bit nf4).
-*(The KenLM `lm_weight` sweep was still improving at the grid edge, so `4.0`
-is the best **confirmed** point, not a proven optimum.)*
 
 ## Project structure
 
@@ -140,9 +137,9 @@ Key flags (all default to the best values in `config.py`):
 
 | Flag | Meaning | Default |
 | ---- | ------- | ------- |
-| `--lm_weight` | KenLM weight in beam search | `4.0` |
+| `--lm_weight` | KenLM weight in beam search | `4.5` |
 | `--beam_width` / `--nbest` | beam size / n-best depth | `250` / `30` |
-| `--llm_fusion_weight` | base fusion λ (margin-adaptive at inference) | `0.5` |
+| `--llm_fusion_weight` | base fusion λ (margin-adaptive at inference) | `0.75` |
 | `--llm_name` | HuggingFace causal LM for rescoring | `Qwen/Qwen2.5-7B` |
 | `--lexicon` / `--tokens` / `--kenlm_binary` | override auto-resolved assets | Kaggle datasets |
 
