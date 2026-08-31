@@ -1,6 +1,10 @@
 # checkpoints/
 
-**Upload the trained model weights here manually.**
+**Download the trained model weights and place them here manually.**
+
+The required model weights can be downloaded from this [Google Drive folder](https://drive.google.com/drive/folders/158r--SA2euXlFlWWAIrZ7fQjg0t-rgc1?usp=drive_link). 
+
+> **Access Note:** This Drive link is restricted. When you click the link, you will be prompted to request access. Please request **Viewer** permission so you can download the files. You do not need to ask for Editor access.
 
 The inference scripts (`predict.py`, `decode_llm.py`, `evaluate.py`) look for
 these files in this folder (or in the Kaggle dataset named by
