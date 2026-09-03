@@ -17,12 +17,34 @@ original single Kaggle notebook (`notebooks/iccit-brain-to-text-hybrid-qwen2-5-7
 
 | Stage | WER | CER |
 | ----- | --: | --: |
-| Beam + KenLM (no LLM) | 7.71% | 5.38% |
-| **Beam + KenLM + Qwen2.5-7B fusion** | **7.55%** | **5.31%** |
+| Beam + KenLM (no LLM) | 7.37% | 5.33% |
+| **Beam + KenLM + Qwen2.5-7B fusion** | **7.26%** | **5.18%** |
 
 Best decoding configuration (pinned as defaults in `config.py`):
-`lm_weight = 4.5`, fusion `λ = 0.75`, beam width `250`, n-best `30`, gate
+`lm_weight = 5.5`, fusion `λ = 1.25`, beam width `250`, n-best `30`, gate
 percentiles `1 / 75`, rescoring LLM `Qwen/Qwen2.5-7B` (4-bit nf4).
+
+### Rescoring-LLM comparison
+
+Five candidate LLMs were swept as zero-shot rescorers on top of the same CTC
+beam-search + KenLM decoder (`lm_weight` swept 0.5–6.0, fusion `λ` re-tuned at
+every point):
+
+| Rescoring LLM | Best lm_weight | Best λ | WER | CER |
+| --- | --: | --: | --: | --: |
+| **Qwen2.5-7B** (default) | 5.5 | 1.25 | **7.26%** | **5.18%** |
+| Llama3.2-3B-Instruct | 5.5 | 0.5 | 7.33% | **5.16%** |
+| Qwen3-4B | 5.5 | 0.0 | 7.37% | 5.33% |
+| Mistral-7B | 4.0 | 0.5 | 8.27% | 5.75% |
+| Gemma3-4B | 4.0 | 0.0 | 8.33% | 5.87% |
+
+Qwen2.5-7B gives the best overall WER/CER and is the pipeline default.
+Llama3.2-3B-Instruct is a strong efficiency alternative — within ~0.1 WER
+point of Qwen2.5-7B (and the lowest CER of any candidate) at roughly half the
+parameter count. Qwen3-4B and Gemma3-4B benefit from LLM fusion only at lower
+`lm_weight` values; at each model's own best operating point their re-tuned λ
+settles to 0, so the n-gram-only decode already matches the LLM-assisted
+result there.
 
 ## Project structure
 
@@ -81,6 +103,11 @@ score fusion → text`. The LLM never overrides the acoustic + n-gram evidence; 
 where the decoder is least confident. Gating skips clearly incoherent trials (1st
 percentile) and already-confident trials (75th percentile). See `src/decoding.py`.
 
+WER falls steeply as `lm_weight` increases from 0.5 to ~2.5–3.0, then flattens
+into a shallow plateau from `lm_weight ≈ 4` onward, with the optimum sitting at
+`lm_weight = 5.5` for the default Qwen2.5-7B rescorer — the n-gram LM does the
+bulk of the error reduction, and pushing `lm_weight` past ~6.0 slightly hurts.
+
 ## Data
 
 Kaggle **brain-to-text-25** HDF5 files (512-channel neural features + phoneme IDs +
@@ -137,11 +164,16 @@ Key flags (all default to the best values in `config.py`):
 
 | Flag | Meaning | Default |
 | ---- | ------- | ------- |
-| `--lm_weight` | KenLM weight in beam search | `4.5` |
+| `--lm_weight` | KenLM weight in beam search | `5.5` |
 | `--beam_width` / `--nbest` | beam size / n-best depth | `250` / `30` |
-| `--llm_fusion_weight` | base fusion λ (margin-adaptive at inference) | `0.75` |
+| `--llm_fusion_weight` | base fusion λ (margin-adaptive at inference) | `1.25` |
 | `--llm_name` | HuggingFace causal LM for rescoring | `Qwen/Qwen2.5-7B` |
 | `--lexicon` / `--tokens` / `--kenlm_binary` | override auto-resolved assets | Kaggle datasets |
+
+> **Efficiency alternative:** pass `--llm_name meta-llama/Llama-3.2-3B-Instruct
+> --lm_weight 5.5 --llm_fusion_weight 0.5` for a ~3B-parameter rescorer that
+> lands within 0.1 WER point of the default (and edges it out on CER) at
+> roughly half the inference cost.
 
 ### 4. Reproduce the paper numbers
 
