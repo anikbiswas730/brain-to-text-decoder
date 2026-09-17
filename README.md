@@ -13,9 +13,6 @@ on out-of-fold trials and verified on a fold nothing was selected on.
 
 This is the modularized, repo-ready version of the two Kaggle notebooks in `notebooks/`.
 
-> The architecture figure is the **B-T-S pipeline** diagram. Upload the paper's own
-> `B-T-S pipeline.jpg` to the repository root (see `assets/README.md`) — it is not
-> machine-generated here, to keep the figure authentic for the paper.
 
 ## Results
 
