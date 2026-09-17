@@ -1,127 +1,124 @@
-#!/usr/bin/env python
 """
-predict.py — fast baseline submission: greedy CTC phoneme decode -> words via
-lexicon exact-match, no beam search, no KenLM, no LLM.
+predict.py — the fast baseline: greedy CTC decode mapped through the lexicon,
+straight to a submission. No beam search, no KenLM, no LLM.
 
-This is the quick sanity path. For the accurate (7.55% WER) submission use
-decode_llm.py.
+    python predict.py --checkpoint_dir /path/to/b2t_v6_ckpt \
+                      --output submission/submission_baseline.csv
 
-Example
--------
-    python predict.py --checkpoint checkpoints/best_model.pt \
-        --output submission/submission.csv
+Use it to prove a checkpoint bundle is loadable and wired correctly before
+spending hours in `decode_llm.py`, and as the emergency submission if the full
+pipeline cannot finish inside a session. Expect roughly 43-44% WER from it: the
+collapse-and-look-up decoder has no language model at all, and every phoneme
+chunk that is not a lexicon entry becomes `<unk>`. That gap between ~44% here and
+single digits after beam + KenLM + LLM is the whole point of the decoding stage —
+do not read this number as the model's quality.
+
+With several folds, each test trial is decoded by the first model only; the
+exact-CTC ensembling that makes multiple folds worth having lives in
+`decode_llm.py`.
 """
 
-import os
 import argparse
-from glob import glob
+import os
+import sys
+import time
 
+import numpy as np
 import pandas as pd
 import torch
-from tqdm import tqdm
 
-from config import (CONFIG, resolve_device, PRETRAINED_CKPT_DATASET,
-                    LEXICON_DATASET_SLUG)
-from src.utils import (set_seed, get_session2idx, resolve_kaggle_dataset, find_file)
-from src.model import build_model
-from src.metrics import greedy_decode_phonemes, build_lexicon_reverse, phoneme_ids_to_words
-from src.inference import block_load_test_data, extract_emissions
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-
-def load_norm_and_model(cfg, n_days):
-    device = cfg['device']
-    search_dir = cfg['checkpoint_dir']
-    if PRETRAINED_CKPT_DATASET and not os.path.exists(os.path.join(search_dir, 'norm_stats.pt')):
-        search_dir = resolve_kaggle_dataset(PRETRAINED_CKPT_DATASET)
-        print(f"Checkpoint source: {search_dir}")
-
-    norm_stats = torch.load(find_file(search_dir, 'norm_stats.pt'))
-    feat_mean, feat_std = norm_stats['mean'], norm_stats['std']
-
-    candidates = [cfg.get('checkpoint'),
-                  os.path.join(search_dir, 'swa_model.pt'),
-                  os.path.join(search_dir, 'best_model.pt')]
-    ckpt_path = next((p for p in candidates if p and os.path.exists(p)), None)
-    assert ckpt_path is not None, f"No checkpoint found (tried {candidates})."
-    print(f"Loading checkpoint: {ckpt_path}")
-    ckpt = torch.load(ckpt_path, map_location=device)
-
-    model = build_model(cfg, n_days).to(device)
-    model.load_state_dict(ckpt['model_state_dict'])
-    model.eval()
-    return model, feat_mean, feat_std
+import config as C
+from src.dataset import CacheReader, build_cache, make_crossfit_split
+from src.inference import (build_day_override, extract_emissions, find_checkpoint_dir,
+                           group_checkpoints, load_am)
+from src.metrics import greedy_collapse, load_lexicon, official_per, official_wer, phones_to_words
+from src.utils import (find_file, get_session2idx, human_time, pick_cache_dir,
+                       resolve_competition_path, resolve_kaggle_dataset, set_seed)
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Baseline greedy-CTC submission.")
-    p.add_argument('--data_dir', default=CONFIG['data_dir'])
-    p.add_argument('--checkpoint_dir', default=CONFIG['checkpoint_dir'])
-    p.add_argument('--checkpoint', default=None, help='explicit checkpoint path')
+    p = argparse.ArgumentParser(description='Greedy-lexicon baseline submission')
+    p.add_argument('--data_dir', default=C.DEFAULT_DATA_DIR)
+    p.add_argument('--checkpoint_dir', default=None)
+    p.add_argument('--cache_dir', default=None)
     p.add_argument('--lexicon', default=None)
-    p.add_argument('--output', default='submission/submission_baseline.csv')
-    p.add_argument('--no_amp', action='store_true')
+    p.add_argument('--output', default=os.path.join(C.DEFAULT_SUBMISSION_DIR,
+                                                    'submission_baseline.csv'))
+    p.add_argument('--report_val', action='store_true',
+                   help='also report PER / WER on each fold\'s held-out val trials')
     return p.parse_args()
 
 
 def main():
     args = parse_args()
-    cfg = dict(CONFIG)
-    cfg.update({'data_dir': args.data_dir, 'checkpoint_dir': args.checkpoint_dir,
-                'checkpoint': args.checkpoint, 'use_amp': not args.no_amp})
-    cfg['device'] = resolve_device(cfg['device'])
-    set_seed(cfg['seed'])
+    set_seed(C.SEED)
+    os.makedirs(os.path.dirname(args.output) or '.', exist_ok=True)
+    device = C.resolve_device()
+    t0 = time.time()
 
-    session2idx = get_session2idx(cfg['data_dir'])
-    n_days = len(session2idx)
+    data_dir = resolve_competition_path(args.data_dir, C.COMPETITION_SLUG)
+    session2idx = get_session2idx(data_dir)
+    idx2session = {v: k for k, v in session2idx.items()}
+    cache_dir = pick_cache_dir([args.cache_dir] if args.cache_dir else C.CACHE_CANDIDATES,
+                               C.CACHE_NEED_GB)
+    build_cache(data_dir, cache_dir)
+    readers = {s: CacheReader(cache_dir, s) for s in ('train', 'val', 'test')}
+    n_val, n_test = len(readers['val']), len(readers['test'])
 
-    model, feat_mean, feat_std = load_norm_and_model(cfg, n_days)
+    ckpt_dir = find_checkpoint_dir(args.checkpoint_dir, C.PRETRAINED_CKPT_DIR,
+                                   C.DEFAULT_CHECKPOINT_DIR, '/kaggle/input')
+    if ckpt_dir is None:
+        raise FileNotFoundError('No fold*_seed*_*.pt found — run train.py first or pass '
+                                '--checkpoint_dir.')
+    print('checkpoints:', ckpt_dir)
+    norm = torch.load(find_file(ckpt_dir, 'norm_stats.pt'), weights_only=False)
+    day_override, _ = build_day_override(ckpt_dir, len(session2idx), idx2session)
 
-    lexicon_path = args.lexicon
-    if lexicon_path is None:
-        lexicon_path = os.path.join(resolve_kaggle_dataset(LEXICON_DATASET_SLUG), 'lexicon.txt')
-    lexicon_reverse = build_lexicon_reverse(lexicon_path)
+    groups = group_checkpoints(ckpt_dir, C.CKPT_PREFERENCE)
+    if not groups:
+        raise FileNotFoundError(f'no checkpoint matching {C.CKPT_PREFERENCE} under {ckpt_dir}')
+    tag = sorted(groups)[0]
+    name = next(n for n in C.CKPT_PREFERENCE if n in groups[tag])
+    model, ck = load_am(groups[tag][name], device)
+    print(f'using {tag}/{name} (epoch {ck.get("epoch")}, step {ck.get("step")}, '
+          f'trained on val labels {sorted(ck.get("train_val_labels", []))})')
 
-    print("Loading test set ...")
-    samples = block_load_test_data(cfg['data_dir'], session2idx, feat_mean, feat_std,
-                                   clip=cfg['feature_clip'])
-    emissions, lengths, ids = extract_emissions(model, samples, cfg['device'],
-                                                use_amp=cfg['use_amp'])
-
-    print("Greedy CTC decoding ...")
-    log_probs = emissions.transpose(0, 1)  # [T, B, V] for greedy_decode_phonemes
-    predictions = []
-    B = 64
-    for i in tqdm(range(0, log_probs.shape[1], B), desc="Greedy decode"):
-        chunk = log_probs[:, i:i + B, :]
-        chunk_lengths = lengths[i:i + B]
-        decoded = greedy_decode_phonemes(chunk, chunk_lengths)
-        for phon_ids in decoded:
-            predictions.append(phoneme_ids_to_words(phon_ids, lexicon_reverse))
-
-    write_submission(cfg['data_dir'], ids, predictions, args.output)
-
-
-def write_submission(data_dir, ids, predictions, output):
-    sample_sub_path = None
-    for pattern in [os.path.join(os.path.dirname(data_dir), '**', 'sample_submission.csv'),
-                    '/kaggle/input/**/sample_submission.csv']:
-        matches = glob(pattern, recursive=True)
-        if matches:
-            sample_sub_path = matches[0]
-            break
-    if sample_sub_path:
-        cols = pd.read_csv(sample_sub_path).columns
-        id_col, text_col = cols[0], cols[1]
+    if args.lexicon:
+        lexicon_path = args.lexicon
     else:
-        id_col, text_col = 'id', 'text'
+        lexicon_path = find_file(resolve_kaggle_dataset(C.LEXICON_DATASET_SLUG), 'lexicon.txt')
+    _, pron2words = load_lexicon(lexicon_path)
 
-    os.makedirs(os.path.dirname(output) or '.', exist_ok=True)
-    df = pd.DataFrame({id_col: ids, text_col: predictions})
-    df = df.sort_values(id_col).reset_index(drop=True)
-    df[id_col] = range(len(df))
-    df.to_csv(output, index=False)
-    print(f"\nWrote {output}")
-    print(df.head(10).to_string(index=False))
+    def decode(ems):
+        out = []
+        for em in ems:
+            ids = greedy_collapse(torch.from_numpy(em.astype(np.float32))[:, None, :],
+                                  [em.shape[0]])[0]
+            out.append((ids, phones_to_words(ids, pron2words)))
+        return out
+
+    if args.report_val:
+        try:
+            split = __import__('json').load(open(find_file(ckpt_dir, 'split.json')))
+        except Exception:
+            split = {'labels': make_crossfit_split(readers['val'].meta, C.CROSSFIT_PATTERN, C.SEED)}
+        labels = [split['labels'].get(m['key'], 'C') for m in readers['val'].meta]
+        seen = set(ck.get('train_val_labels', []))
+        hold = [j for j in range(n_val) if labels[j] not in seen]
+        got = decode(extract_emissions(model, readers, 'val', hold, session2idx, norm,
+                                       C.TRAIN_CFG['clip'], device, day_override))
+        per = official_per([g[0] for g in got],
+                           [[int(p) for p in readers['val'].meta[j]['phonemes']] for j in hold])[0]
+        wer = official_wer([readers['val'].meta[j]['sentence'] for j in hold], [g[1] for g in got])[0]
+        print(f'held-out ({len(hold)} trials, folds {sorted(set(labels[j] for j in hold))}): '
+              f'PER {per * 100:.2f}% | greedy-lexicon WER {wer * 100:.2f}%')
+
+    got = decode(extract_emissions(model, readers, 'test', list(range(n_test)), session2idx, norm,
+                                   C.TRAIN_CFG['clip'], device, day_override))
+    pd.DataFrame({'id': range(n_test), 'text': [g[1] for g in got]}).to_csv(args.output, index=False)
+    print(f'submission -> {args.output} ({n_test} rows) | {human_time(time.time() - t0)}')
 
 
 if __name__ == '__main__':

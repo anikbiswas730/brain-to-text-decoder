@@ -1,198 +1,200 @@
-#!/usr/bin/env python
 """
-evaluate.py — reproduce the paper's validation numbers on the val split.
+evaluate.py — the reporting stage: turn `tables/val_predictions.csv` (written by
+decode_llm.py) into the numbers and figures a paper needs.
 
-Reports:
-    * WER / CER  — beam + KenLM only (no LLM)
-    * WER / CER  — beam + KenLM + margin-adaptive Qwen fusion (submission pipeline)
-    * PER        — CTC-greedy vs. ground-truth phoneme IDs (LLM-independent)
-    * per-recording-day WER/CER/PER
-Saves val_wer.json + figures/metrics_summary.png under --checkpoint_dir.
+    python evaluate.py                       # reads tables/val_predictions.csv
+    python evaluate.py --tables_dir tables --figures_dir figures
 
-Example
--------
-    python evaluate.py --checkpoint checkpoints/best_model.pt
+Produces:
+
+    tables/ablation.csv              WER/CER per system, per fold
+    tables/per_day_analysis.csv      WER per recording session, sorted
+    tables/outlier_days_analysis.csv the worst days (WER >= mean + 1 sd)
+    tables/clean_days_analysis.csv   the rest
+    tables/error_breakdown.csv       substitutions / deletions / insertions
+    figures/ablation_wer.png         the stack, tune vs verify
+    figures/wer_by_day.png           per-day WER with the outlier threshold
+
+Read the columns in this order:
+
+  * **verify_C** is the honest number. Nothing in the pipeline was selected on
+    fold C, so it is the only column that estimates unseen-data performance.
+  * **tune_AuB** is what the sweep optimised, so it is optimistic by construction
+    — the gap between the two columns is how much tune noise got fitted.
+  * the **FINAL** row is refit on A u B u C and is therefore IN-SAMPLE on C. It is
+    reported because it is the system that produced the submission, not as an
+    estimate of anything.
 """
 
-import os
-import json
 import argparse
+import os
+import sys
 
-import numpy as np
 import editdistance
-import torch
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from torch.utils.data import DataLoader
-from tqdm import tqdm
+import numpy as np
+import pandas as pd
 
-from config import (CONFIG, DECODING, resolve_device, PRETRAINED_CKPT_DATASET,
-                    LEXICON_DATASET_SLUG, KENLM_DATASET_SLUG)
-from src.utils import (set_seed, get_session2idx, resolve_kaggle_dataset, find_file,
-                       amp_autocast)
-from src.dataset import load_split, BrainToTextDataset, collate_fn
-from src.model import build_model
-from src.metrics import (greedy_decode_phonemes, corpus_wer, corpus_cer, PHONEME_VOCAB)
-from src.decoding import build_decoder, LLMRescorer
-from src.inference import extract_emissions_from_loader
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import config as C
+from src.metrics import bootstrap_wer_sd, official_cer, official_wer, remove_punctuation
+from src.utils import figure_guard, init_matplotlib, save_fig, save_table
+
+META_COLS = ['idx', 'session', 'block', 'fold', 'reference']
 
 
-def load_norm_and_model(cfg, n_days):
-    device = cfg['device']
-    search_dir = cfg['checkpoint_dir']
-    if PRETRAINED_CKPT_DATASET and not os.path.exists(os.path.join(search_dir, 'norm_stats.pt')):
-        search_dir = resolve_kaggle_dataset(PRETRAINED_CKPT_DATASET)
-        print(f"Checkpoint source: {search_dir}")
-    norm_stats = torch.load(find_file(search_dir, 'norm_stats.pt'))
-    feat_mean, feat_std = norm_stats['mean'], norm_stats['std']
+def parse_args():
+    p = argparse.ArgumentParser(description='Brain-to-Text v6 validation report')
+    p.add_argument('--predictions', default=None,
+                   help='val_predictions.csv (default: <tables_dir>/val_predictions.csv)')
+    p.add_argument('--tables_dir', default=C.DEFAULT_TABLES_DIR)
+    p.add_argument('--figures_dir', default=C.DEFAULT_FIGURES_DIR)
+    p.add_argument('--bootstrap', type=int, default=400)
+    return p.parse_args()
 
-    candidates = [cfg.get('checkpoint'),
-                  os.path.join(search_dir, 'swa_model.pt'),
-                  os.path.join(search_dir, 'best_model.pt')]
-    ckpt_path = next((p for p in candidates if p and os.path.exists(p)), None)
-    assert ckpt_path is not None, f"No checkpoint found (tried {candidates})."
-    print(f"Loading checkpoint: {ckpt_path}")
-    ckpt = torch.load(ckpt_path, map_location=device)
-    model = build_model(cfg, n_days).to(device)
-    model.load_state_dict(ckpt['model_state_dict'])
-    model.eval()
-    return model, feat_mean, feat_std
+
+def error_counts(ref, hyp):
+    """(substitutions, deletions, insertions) from the edit-distance alignment."""
+    r, h = remove_punctuation(ref or '').split(), remove_punctuation(hyp or '').split()
+    n, m = len(r), len(h)
+    d = np.zeros((n + 1, m + 1), dtype=np.int32)
+    d[:, 0] = np.arange(n + 1)
+    d[0, :] = np.arange(m + 1)
+    for i in range(1, n + 1):
+        for j in range(1, m + 1):
+            d[i, j] = min(d[i - 1, j] + 1, d[i, j - 1] + 1,
+                          d[i - 1, j - 1] + (r[i - 1] != h[j - 1]))
+    i, j, s, dele, ins = n, m, 0, 0, 0
+    while i > 0 or j > 0:
+        if i > 0 and j > 0 and d[i, j] == d[i - 1, j - 1] + (r[i - 1] != h[j - 1]):
+            s += int(r[i - 1] != h[j - 1])
+            i, j = i - 1, j - 1
+        elif i > 0 and d[i, j] == d[i - 1, j] + 1:
+            dele += 1
+            i -= 1
+        else:
+            ins += 1
+            j -= 1
+    return s, dele, ins
 
 
 def main():
     args = parse_args()
-    cfg = dict(CONFIG)
-    cfg.update({'data_dir': args.data_dir, 'checkpoint_dir': args.checkpoint_dir,
-                'checkpoint': args.checkpoint, 'use_amp': not args.no_amp})
-    cfg['device'] = resolve_device(cfg['device'])
-    set_seed(cfg['seed'])
-    device = cfg['device']
+    plt = init_matplotlib()
+    path = args.predictions or os.path.join(args.tables_dir, 'val_predictions.csv')
+    if not os.path.exists(path):
+        raise FileNotFoundError(f'{path} not found — run decode_llm.py first (it writes this file).')
+    df = pd.read_csv(path).fillna('')
+    systems = [c for c in df.columns if c not in META_COLS]
+    refs = df['reference'].tolist()
+    tune = df['fold'].isin(C.LLM_CFG['tune_labels']).values
+    verify = df['fold'].isin(C.LLM_CFG['verify_labels']).values
+    print(f'{len(df)} out-of-fold val trials | tune(A u B) {tune.sum()} | verify(C) {verify.sum()} '
+          f'| {len(systems)} systems')
 
-    session2idx = get_session2idx(cfg['data_dir'])
-    n_days = len(session2idx)
-    idx2session = {v: k for k, v in session2idx.items()}
+    # ---- ablation ---------------------------------------------------------
+    rows = []
+    for s in systems:
+        hyps = df[s].tolist()
+        row = {'system': s,
+               'tune_AuB_WER_%': round(100 * official_wer(list(np.array(refs)[tune]),
+                                                          list(np.array(hyps)[tune]))[0], 2),
+               'verify_C_WER_%': (round(100 * official_wer(list(np.array(refs)[verify]),
+                                                           list(np.array(hyps)[verify]))[0], 2)
+                                  if verify.any() else float('nan')),
+               'all_OOF_WER_%': round(100 * official_wer(refs, hyps)[0], 2),
+               'all_OOF_CER_%': round(100 * official_cer(refs, hyps)[0], 2)}
+        if verify.any():
+            row['verify_C_sd_pp'] = round(100 * bootstrap_wer_sd(list(np.array(refs)[verify]),
+                                                                 list(np.array(hyps)[verify]),
+                                                                 args.bootstrap, C.SEED), 2)
+        rows.append(row)
+    abl = pd.DataFrame(rows)
+    print('\n' + abl.to_string(index=False))
+    save_table(abl, 'ablation.csv', args.tables_dir)
+    print('\nverify_C is the only column nothing was selected on; the FINAL row is refit on '
+          'A u B u C and is in-sample on C.')
 
-    model, feat_mean, feat_std = load_norm_and_model(cfg, n_days)
+    final = systems[-1]
 
-    # Assets + decoder + LLM.
-    lexicon_ds = resolve_kaggle_dataset(LEXICON_DATASET_SLUG)
-    kenlm_ds = resolve_kaggle_dataset(KENLM_DATASET_SLUG)
-    lexicon_path = args.lexicon or find_file(lexicon_ds, 'lexicon.txt')
-    tokens_path = args.tokens or find_file(lexicon_ds, 'tokens.txt')
-    kenlm_binary = args.kenlm_binary or find_file(kenlm_ds, '*.bin')
-    decoder = build_decoder(lexicon_path, tokens_path, kenlm_binary,
-                            lm_weight=args.lm_weight, beam_size=args.beam_width,
-                            nbest=args.nbest)
-    rescorer = LLMRescorer.load(model_name=args.llm_name, fusion_weight=args.llm_fusion_weight)
+    # ---- error breakdown --------------------------------------------------
+    brk = []
+    for s in systems:
+        S = D = I = N = 0
+        for r, h in zip(refs, df[s].tolist()):
+            a, b, c = error_counts(r, h)
+            S += a
+            D += b
+            I += c
+            N += len(remove_punctuation(r or '').split())
+        brk.append({'system': s, 'sub_%': round(100 * S / max(N, 1), 2),
+                    'del_%': round(100 * D / max(N, 1), 2), 'ins_%': round(100 * I / max(N, 1), 2),
+                    'sub_share_of_errors_%': round(100 * S / max(S + D + I, 1), 1)})
+    brk = pd.DataFrame(brk)
+    print('\n' + brk.to_string(index=False))
+    save_table(brk, 'error_breakdown.csv', args.tables_dir)
 
-    val_data = load_split(cfg['data_dir'], 'val')
-    val_ds = BrainToTextDataset(val_data, session2idx, feat_mean, feat_std,
-                                augment=False, clip=cfg['feature_clip'])
-    val_loader = DataLoader(val_ds, batch_size=cfg['batch_size'], shuffle=False,
-                            collate_fn=collate_fn, num_workers=cfg['num_workers'])
+    # ---- per-day ----------------------------------------------------------
+    # Columns for the first system (greedy), the beam baseline, and the final one,
+    # so a bad day can be traced to the acoustic model or to the decoder.
+    track = [s for s in (systems[0], systems[1] if len(systems) > 1 else None, final) if s]
+    day_rows = []
+    for sess, g in df.groupby('session'):
+        row = {'session': sess, 'n_trials': len(g)}
+        for s in track:
+            w, ed, n = official_wer(g['reference'].tolist(), g[s].tolist())
+            row[f'WER_% [{s}]'] = round(100 * w, 2)
+            if s == final:
+                row.update({'ref_words': int(n), 'edits': int(ed), 'WER_%': round(100 * w, 2)})
+        day_rows.append(row)
+    day = pd.DataFrame(day_rows).sort_values('WER_%', ascending=False).reset_index(drop=True)
+    # the notebook's rule: a day is an outlier at twice the median, or 5 points above it,
+    # whichever is larger — robust to the handful of very short sessions
+    med = float(day['WER_%'].median())
+    thr = max(2 * med, med + 5.0)
+    day['outlier'] = day['WER_%'] >= thr
+    save_table(day, 'per_day_analysis.csv', args.tables_dir)
+    save_table(day[day['outlier']].drop(columns='outlier'), 'outlier_days_analysis.csv', args.tables_dir)
+    save_table(day[~day['outlier']].drop(columns='outlier'), 'clean_days_analysis.csv', args.tables_dir)
+    print(f'\nper-day WER on "{final}": median {med:.2f}%, '
+          f'outlier threshold {thr:.2f}%, {int(day["outlier"].sum())} outlier day(s): '
+          f'{day[day["outlier"]]["session"].tolist() or "none"}')
 
-    # ---- Emissions + beam search (top-1, no LLM) --------------------------
-    val_em, val_len, val_refs, val_days = extract_emissions_from_loader(
-        model, val_loader, device, use_amp=cfg['use_amp'])
+    # ---- figures ----------------------------------------------------------
+    with figure_guard('ablation_wer'):
+        fig, ax = plt.subplots(figsize=(8, 0.5 * len(abl) + 2))
+        y = np.arange(len(abl))
+        ax.barh(y - 0.2, abl['tune_AuB_WER_%'], height=0.4, label='tune (A u B)')
+        ax.barh(y + 0.2, abl['verify_C_WER_%'], height=0.4, label='verify (C)')
+        ax.set_yticks(y)
+        ax.set_yticklabels(abl['system'], fontsize=8)
+        ax.invert_yaxis()
+        ax.set_xlabel('WER (%)')
+        ax.legend(frameon=False)
+        ax.grid(axis='x', alpha=0.3)
+        ax.set_title('Ablation: what each decoding stage is worth')
+        save_fig(fig, 'ablation_wer', args.figures_dir)
 
-    print("Beam search (n-best) ...")
-    val_results = []
-    B = args.decode_batch
-    for i in tqdm(range(0, len(val_em), B), desc="Val beam"):
-        val_results.extend(decoder(val_em[i:i + B], val_len[i:i + B]))
+    with figure_guard('wer_by_day'):
+        fig, ax = plt.subplots(figsize=(max(6, 0.35 * len(day)), 3.6))
+        colors = ['tab:red' if o else 'tab:blue' for o in day['outlier']]
+        ax.bar(range(len(day)), day['WER_%'], color=colors)
+        ax.axhline(thr, ls='--', lw=1, c='k', label=f'outlier threshold {thr:.1f}%')
+        ax.set_xticks(range(len(day)))
+        ax.set_xticklabels(day['session'], rotation=90, fontsize=7)
+        ax.set_ylabel('WER (%)')
+        ax.legend(frameon=False)
+        ax.set_title(f'Per-session WER — {final}')
+        save_fig(fig, 'wer_by_day', args.figures_dir)
 
-    top1_hyps = [" ".join(r[0].words) if r and r[0].words else "" for r in val_results]
-    pairs = [(r, h, d) for r, h, d in zip(val_refs, top1_hyps, val_days) if r and r.strip()]
-    refs_clean = [r for r, _, _ in pairs]
-    hyps_clean = [h if h.strip() else "<empty>" for _, h, _ in pairs]
-    clean_days = [d for _, _, d in pairs]
-    overall_wer = corpus_wer(refs_clean, hyps_clean)
-    overall_cer = corpus_cer(refs_clean, hyps_clean)
-    print(f"\nBeam+KenLM (no LLM):  WER={overall_wer * 100:.2f}%  CER={overall_cer * 100:.2f}%")
-
-    # ---- Full pipeline (+LLM fusion) --------------------------------------
-    rescorer.calibrate(val_results)
-    preds, n_low, n_conf = rescorer.rescore_all(val_results, desc="LLM fusion")
-    fpairs = [(r, h) for r, h in zip(val_refs, preds) if r and r.strip()]
-    fr = [r for r, _ in fpairs]
-    fh = [h if h.strip() else "<empty>" for _, h in fpairs]
-    full_wer = corpus_wer(fr, fh)
-    full_cer = corpus_cer(fr, fh)
-    print(f"Beam+KenLM+LLM:       WER={full_wer * 100:.2f}%  CER={full_cer * 100:.2f}%")
-    print(f"Gated {n_low + n_conf}/{len(val_results)} ({n_low} low-score, {n_conf} confident).")
-
-    # ---- PER (CTC-greedy vs. ground-truth phoneme IDs) --------------------
-    per_day_edits, per_day_counts = {}, {}
-    total_edits, total_count = 0, 0
-    model.eval()
-    with torch.no_grad():
-        for batch in tqdm(val_loader, desc="Greedy PER"):
-            neural = batch['neural'].to(device)
-            lengths = batch['lengths']
-            day_idx = batch['day_idx']
-            targets = batch['target']
-            target_lengths = batch['target_lengths']
-            with amp_autocast(enabled=cfg['use_amp']):
-                log_probs, out_len = model(neural, lengths, day_idx.to(device))
-            decoded = greedy_decode_phonemes(log_probs, out_len)
-            for b, phon_ids in enumerate(decoded):
-                ref = targets[b, :target_lengths[b]].tolist()
-                if len(ref) == 0:
-                    continue
-                e = editdistance.eval(phon_ids, ref)
-                d = int(day_idx[b])
-                per_day_edits[d] = per_day_edits.get(d, 0) + e
-                per_day_counts[d] = per_day_counts.get(d, 0) + len(ref)
-                total_edits += e
-                total_count += len(ref)
-    overall_per = total_edits / max(total_count, 1)
-    print(f"PER (CTC-greedy):     {overall_per * 100:.2f}%")
-
-    # ---- Save JSON + summary figure ---------------------------------------
-    os.makedirs(cfg['checkpoint_dir'], exist_ok=True)
-    figures_dir = os.path.join(cfg['checkpoint_dir'], 'figures')
-    os.makedirs(figures_dir, exist_ok=True)
-    with open(os.path.join(cfg['checkpoint_dir'], 'val_wer.json'), 'w') as f:
-        json.dump({
-            'wer_beam_ngram_only': overall_wer, 'cer_beam_ngram_only': overall_cer,
-            'wer_full_pipeline': full_wer, 'cer_full_pipeline': full_cer,
-            'per_greedy': overall_per, 'lm_weight': args.lm_weight,
-            'llm_fusion_weight_base': rescorer.fusion_weight,
-        }, f, indent=2)
-
-    fig, ax = plt.subplots(figsize=(9, 6))
-    labels = ['WER\n(Beam+KenLM)', 'WER\n(+LLM)', 'CER\n(Beam+KenLM)', 'CER\n(+LLM)', 'PER\n(CTC)']
-    values = [overall_wer * 100, full_wer * 100, overall_cer * 100, full_cer * 100, overall_per * 100]
-    bars = ax.bar(labels, values, color=['tab:purple', 'tab:pink', 'tab:blue', 'tab:cyan', 'tab:green'])
-    for bar, v in zip(bars, values):
-        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), f'{v:.1f}%',
-                ha='center', va='bottom')
-    ax.set_ylabel('Error Rate (%)')
-    ax.set_title('Validation Error Rates: WER vs CER vs PER')
-    ax.grid(True, axis='y', alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(os.path.join(figures_dir, 'metrics_summary.png'), dpi=300, bbox_inches='tight')
-    plt.close(fig)
-    print(f"\nSaved val_wer.json and figures/metrics_summary.png under {cfg['checkpoint_dir']}.")
-
-
-def parse_args():
-    p = argparse.ArgumentParser(description="Evaluate WER/CER/PER on validation.")
-    p.add_argument('--data_dir', default=CONFIG['data_dir'])
-    p.add_argument('--checkpoint_dir', default=CONFIG['checkpoint_dir'])
-    p.add_argument('--checkpoint', default=None)
-    p.add_argument('--lexicon', default=None)
-    p.add_argument('--tokens', default=None)
-    p.add_argument('--kenlm_binary', default=None)
-    p.add_argument('--lm_weight', type=float, default=DECODING['lm_weight'])
-    p.add_argument('--beam_width', type=int, default=DECODING['beam_width'])
-    p.add_argument('--nbest', type=int, default=DECODING['nbest'])
-    p.add_argument('--decode_batch', type=int, default=DECODING['decode_batch'])
-    p.add_argument('--llm_name', default=DECODING['llm_name'])
-    p.add_argument('--llm_fusion_weight', type=float, default=DECODING['llm_fusion_weight'])
-    p.add_argument('--no_amp', action='store_true')
-    return p.parse_args()
+    summary = {'n_trials': int(len(df)), 'final_system': final,
+               'tune_AuB_WER_%': float(abl.iloc[-1]['tune_AuB_WER_%']),
+               'verify_C_WER_%': float(abl.iloc[-1]['verify_C_WER_%']),
+               'all_OOF_WER_%': float(abl.iloc[-1]['all_OOF_WER_%']),
+               'all_OOF_CER_%': float(abl.iloc[-1]['all_OOF_CER_%'])}
+    import json
+    json.dump(summary, open(os.path.join(args.tables_dir, 'val_summary.json'), 'w'), indent=1)
+    print('\n' + json.dumps(summary, indent=1))
 
 
 if __name__ == '__main__':
