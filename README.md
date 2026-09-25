@@ -17,7 +17,7 @@ likelihood** and a **QLoRA-adapted Llama-3.1-8B**, and the scores are combined b
 log-linear fusion** whose weights are tuned on out-of-fold trials and verified on a fold that nothing was
 selected on.
 
-**Fold-C WER 3.38 %** (the honest estimate) · all out-of-fold 3.59 % · down from 3.87 % / 4.35 % in v6.2.
+**Fold-C WER 3.38 %**  · down from 3.87 % / 4.35 % in v6.2.
 
 This is the modularized, repo-ready version of the Kaggle notebooks in [`notebooks/`](notebooks/).
 
