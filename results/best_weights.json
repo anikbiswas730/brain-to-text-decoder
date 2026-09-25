@@ -1,0 +1,35 @@
+{
+ "percentile": 5,
+ "tau": -5.961212635040283,
+ "hi": {
+  "ng": 2.5,
+  "llm": 1.6,
+  "nw": -0.5
+ },
+ "lo": {
+  "ng": 0.5,
+  "llm": 0.9,
+  "nw": -4.0
+ },
+ "stage1": {
+  "ng": 2.9,
+  "llm": 0.0,
+  "nw": 0.5,
+  "err": 307.0
+ },
+ "llm_used": true,
+ "llm": "meta-llama/Llama-3.1-8B",
+ "gen_lm_weights": [
+  0.5,
+  1.5,
+  2.5,
+  3.0,
+  3.5,
+  4.5,
+  5.5
+ ],
+ "models": [
+  "foldA_seed0:foldA_seed0_best_per.pt",
+  "foldB_seed1:foldB_seed1_best_wer.pt"
+ ]
+}

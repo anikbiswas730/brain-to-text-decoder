@@ -1,0 +1,5 @@
+group,checkpoint,screen_wer_%,n_trials
+foldA_seed0,best_per.pt,7.61,300
+foldA_seed0,best_wer.pt,7.86,300
+foldB_seed1,best_per.pt,7.46,300
+foldB_seed1,best_wer.pt,7.46,300

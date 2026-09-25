@@ -1,0 +1,5 @@
+kind,utterances,word_errors,share_of_word_errors_%
+model error: reference in pool but outscored,44,51,15.2
+model error: reference not in pool and would lose anyway,82,165,49.1
+reference contains OOV word,6,9,2.7
+search error: reference would win but never entered the pool,67,111,33.0

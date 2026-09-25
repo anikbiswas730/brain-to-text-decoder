@@ -1,0 +1,210 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1140" viewBox="0 0 1800 1140">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/></marker><marker id="arrowD" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#9CA3AF"/></marker></defs>
+<rect width="1800" height="1140" fill="#FFFFFF"/>
+<text x="24" y="36" font-size="21" fill="#111827" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">B-T-S pipeline — Brain-to-Text '25 (v6.4): intracortical neural activity → phonemes → words</text>
+<text x="1776" y="36" font-size="19" fill="#D17A3A" text-anchor="end" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">fold-C WER 3.38 %</text>
+<rect x="20" y="56" width="1760" height="450" rx="16" fill="#FAFBFC" stroke="#D1D5DB" stroke-width="1.5"/>
+<text x="38" y="84" font-size="16" fill="#111827" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">① ACOUSTIC MODEL — two cross-fit folds, one per Kaggle T4 (~10.7 h each)</text>
+<rect x="40" y="100" width="250" height="385" rx="10" fill="#F2F4F7" stroke="#6B7280" stroke-width="1.8"/>
+<text x="54" y="126" font-size="15" font-weight="bold" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Neural features</text>
+<text x="54" y="151" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">x ∈ ℝ^(T × 512), 20 ms bins</text>
+<text x="54" y="170" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif"></text>
+<text x="54" y="189" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">256 electrodes (4 arrays)</text>
+<text x="54" y="208" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">× 2 features:</text>
+<text x="54" y="227" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">  threshold crossings</text>
+<text x="54" y="246" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">  spike-band power</text>
+<text x="54" y="265" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif"></text>
+<text x="54" y="284" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">45 sessions, 2023 – 2025</text>
+<text x="54" y="303" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">train 8 072 · val 1 426</text>
+<text x="54" y="322" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">test 1 450 trials</text>
+<text x="54" y="341" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif"></text>
+<text x="54" y="360" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">per-channel z-score,</text>
+<text x="54" y="379" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">clip ±5</text>
+<rect x="310" y="100" width="310" height="385" rx="10" fill="#FCEEDF" stroke="#D17A3A" stroke-width="1.8"/>
+<text x="324" y="126" font-size="15" font-weight="bold" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Trial-level cross-fit of val</text>
+<rect x="326" y="140" width="24" height="24" rx="4" fill="#4C72B0"/>
+<text x="338" y="157" font-size="12" fill="#fff" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">A</text>
+<rect x="354" y="140" width="24" height="24" rx="4" fill="#3E8E57"/>
+<text x="366" y="157" font-size="12" fill="#fff" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">B</text>
+<rect x="382" y="140" width="24" height="24" rx="4" fill="#4C72B0"/>
+<text x="394" y="157" font-size="12" fill="#fff" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">A</text>
+<rect x="410" y="140" width="24" height="24" rx="4" fill="#3E8E57"/>
+<text x="422" y="157" font-size="12" fill="#fff" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">B</text>
+<rect x="438" y="140" width="24" height="24" rx="4" fill="#D17A3A"/>
+<text x="450" y="157" font-size="12" fill="#fff" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">C</text>
+<rect x="466" y="140" width="24" height="24" rx="4" fill="#4C72B0"/>
+<text x="478" y="157" font-size="12" fill="#fff" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">A</text>
+<rect x="494" y="140" width="24" height="24" rx="4" fill="#3E8E57"/>
+<text x="506" y="157" font-size="12" fill="#fff" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">B</text>
+<rect x="522" y="140" width="24" height="24" rx="4" fill="#4C72B0"/>
+<text x="534" y="157" font-size="12" fill="#fff" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">A</text>
+<rect x="550" y="140" width="24" height="24" rx="4" fill="#3E8E57"/>
+<text x="562" y="157" font-size="12" fill="#fff" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">B</text>
+<rect x="578" y="140" width="24" height="24" rx="4" fill="#D17A3A"/>
+<text x="590" y="157" font-size="12" fill="#fff" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">C</text>
+<text x="326" y="184" font-size="11.5" fill="#6B7280" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-style="italic">one (session, block) of val, in trial order</text>
+<rect x="326" y="203" width="12" height="12" rx="2" fill="#4C72B0"/>
+<text x="346" y="214" font-size="13" fill="#374151" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Model A: train + val-A (GPU 0)</text>
+<rect x="326" y="227" width="12" height="12" rx="2" fill="#3E8E57"/>
+<text x="346" y="238" font-size="13" fill="#374151" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Model B: train + val-B (GPU 1)</text>
+<rect x="326" y="251" width="12" height="12" rx="2" fill="#D17A3A"/>
+<text x="346" y="262" font-size="13" fill="#374151" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Fold C: seen by neither model</text>
+<text x="326" y="286" font-size="12.5" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif"></text>
+<text x="326" y="304" font-size="12.5" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">val split: A 572 · B 570 · C 284</text>
+<text x="326" y="322" font-size="12.5" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif"></text>
+<text x="326" y="340" font-size="12.5" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Every val trial is decoded only by</text>
+<text x="326" y="358" font-size="12.5" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">the model(s) that never saw it —</text>
+<text x="326" y="376" font-size="12.5" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">C by both, exactly like test.</text>
+<text x="326" y="394" font-size="12.5" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif"></text>
+<text x="326" y="412" font-size="12.5" fill="#6B7280" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">trial-level, because Kaggle test trials</text>
+<text x="326" y="430" font-size="12.5" fill="#6B7280" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">are interleaved with val trials</text>
+<text x="326" y="448" font-size="12.5" fill="#6B7280" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">inside the same recording blocks)</text>
+<rect x="640" y="100" width="850" height="385" rx="10" fill="#E3EBF7" stroke="#4C72B0" stroke-width="1.8"/>
+<text x="654" y="126" font-size="15" font-weight="bold" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">B2TNetV4 — Patch-Conv · BiGRU · Conformer, CTC (30.15 M params)</text>
+<rect x="656" y="150" width="104" height="140" rx="8" fill="#FFFFFF" stroke="#4C72B0" stroke-width="1.5"/>
+<text x="708.0" y="174" font-size="12.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">Day adapter</text>
+<text x="708.0" y="195" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">rank-32 resid.</text>
+<text x="708.0" y="213" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">per session</text>
+<text x="708.0" y="231" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">+ generic slot</text>
+<text x="708.0" y="249" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">id. at init</text>
+<rect x="775" y="150" width="104" height="140" rx="8" fill="#FFFFFF" stroke="#4C72B0" stroke-width="1.5"/>
+<text x="827.0" y="174" font-size="12.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">Gaussian</text>
+<text x="827.0" y="195" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">smoothing</text>
+<text x="827.0" y="213" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">σ = 2 bins</text>
+<path d="M 760 220 L 774 220" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="894" y="150" width="104" height="140" rx="8" fill="#FFFFFF" stroke="#4C72B0" stroke-width="1.5"/>
+<text x="946.0" y="174" font-size="12.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">Time mask</text>
+<text x="946.0" y="195" font-size="11.5" fill="#6B7280" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">(training)</text>
+<text x="946.0" y="213" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">in-model</text>
+<path d="M 879 220 L 893 220" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="1013" y="150" width="104" height="140" rx="8" fill="#FFFFFF" stroke="#4C72B0" stroke-width="1.5"/>
+<text x="1065.0" y="174" font-size="12.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">Patch</text>
+<text x="1065.0" y="195" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Conv1d</text>
+<text x="1065.0" y="213" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">k 14 · s 4</text>
+<text x="1065.0" y="231" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">→ d 512</text>
+<path d="M 998 220 L 1012 220" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="1132" y="150" width="104" height="140" rx="8" fill="#FFFFFF" stroke="#4C72B0" stroke-width="1.5"/>
+<text x="1184.0" y="174" font-size="12.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">4 × Res-</text>
+<text x="1184.0" y="195" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">BiGRU</text>
+<text x="1184.0" y="213" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">384 / dir.</text>
+<text x="1184.0" y="231" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">packed</text>
+<path d="M 1117 220 L 1131 220" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="1251" y="150" width="104" height="140" rx="8" fill="#FFFFFF" stroke="#4C72B0" stroke-width="1.5"/>
+<text x="1303.0" y="174" font-size="12.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">3 × Con-</text>
+<text x="1303.0" y="195" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">former</text>
+<text x="1303.0" y="213" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">RoPE MHSA</text>
+<text x="1303.0" y="231" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">8 heads</text>
+<text x="1303.0" y="249" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">conv k 15</text>
+<path d="M 1236 220 L 1250 220" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="1370" y="150" width="104" height="140" rx="8" fill="#FFFFFF" stroke="#4C72B0" stroke-width="1.5"/>
+<text x="1422.0" y="174" font-size="12.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">CTC head</text>
+<text x="1422.0" y="195" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Linear →</text>
+<text x="1422.0" y="213" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">41 classes</text>
+<text x="1422.0" y="231" font-size="11.5" fill="#1F2937" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">log-softmax</text>
+<path d="M 1355 220 L 1369 220" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
+<path d="M 1184.0 290 L 1184.0 322" fill="none" stroke="#9CA3AF" stroke-width="1.6" stroke-dasharray="7 5" marker-end="url(#arrowD)"/>
+<path d="M 1303.0 290 L 1303.0 322" fill="none" stroke="#9CA3AF" stroke-width="1.6" stroke-dasharray="7 5" marker-end="url(#arrowD)"/>
+<rect x="1126" y="324" width="235" height="30" rx="6" fill="#FFFFFF" stroke="#9CA3AF" stroke-dasharray="6 4"/>
+<text x="1243.5" y="344" font-size="11.5" fill="#6B7280" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">inter-CTC heads (training only)</text>
+<text x="656" y="390" font-size="12.5" fill="#374151" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Loss = CTC + 0.3 · inter-CTC + 0.2 · CR-CTC (consistency between two augmented views)</text>
+<text x="656" y="412" font-size="12.5" fill="#374151" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Augment: speed ×0.9–1.1, white noise, offsets, gain, electrode dropout, time masking</text>
+<text x="656" y="434" font-size="12.5" fill="#374151" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">AdamW 7e-4, time-based cosine to the session deadline · EMA 0.999 · day dropout 0.15</text>
+<text x="656" y="456" font-size="12.5" fill="#374151" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Continue-trained from the previous run; memory guard + resume keeps 11 h runs alive</text>
+<rect x="1510" y="100" width="250" height="385" rx="10" fill="#E3EBF7" stroke="#4C72B0" stroke-width="1.8"/>
+<text x="1524" y="126" font-size="15" font-weight="bold" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Phoneme posteriors</text>
+<text x="1524" y="151" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">log P(c_t | x)</text>
+<text x="1524" y="170" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">shape [T′ × 41]</text>
+<text x="1524" y="189" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">T′ = ⌊(T − 14)/4⌋ + 1</text>
+<text x="1524" y="208" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif"></text>
+<text x="1524" y="227" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">39 CMU phonemes</text>
+<text x="1524" y="246" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">+ CTC blank</text>
+<text x="1524" y="265" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">+ word boundary “|”</text>
+<text x="1524" y="284" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif"></text>
+<text x="1524" y="303" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">held-out greedy PER</text>
+<text x="1524" y="322" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">A 6.88 % · B 6.89 %</text>
+<text x="1524" y="341" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif"></text>
+<text x="1524" y="360" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">checkpoint per fold picked</text>
+<text x="1524" y="379" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">by real beam WER on its</text>
+<text x="1524" y="398" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">own held-out trials</text>
+<path d="M 290 290 L 309 290" fill="none" stroke="#374151" stroke-width="2.2" marker-end="url(#arrow)"/>
+<path d="M 620 290 L 639 290" fill="none" stroke="#374151" stroke-width="2.2" marker-end="url(#arrow)"/>
+<path d="M 1490 290 L 1509 290" fill="none" stroke="#374151" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="20" y="540" width="1760" height="525" rx="16" fill="#FAFBFC" stroke="#D1D5DB" stroke-width="1.5"/>
+<text x="38" y="568" font-size="16" fill="#111827" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">② DECODING — per trial (val: out-of-fold models only · test: both models)</text>
+<path d="M 1635 485 L 1635 520 L 240 520 L 240 596" fill="none" stroke="#374151" stroke-width="2.2" marker-end="url(#arrow)"/>
+<text x="900" y="514" font-size="12.5" fill="#6B7280" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-style="italic">emissions of every model that never trained on the trial</text>
+<rect x="40" y="598" width="405" height="180" rx="10" fill="#E4F2E7" stroke="#3E8E57" stroke-width="1.8"/>
+<circle cx="64" cy="619" r="12" fill="#3E8E57"/><text x="64" y="624" font-size="13" font-weight="bold" fill="#fff" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">1</text>
+<text x="84" y="624" font-size="15" font-weight="bold" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Lexicon beam search</text>
+<text x="54" y="649" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">flashlight LexiconDecoder + KenLM 4-gram</text>
+<text x="54" y="668" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">beam 1200 · n-best 100 per LM weight</text>
+<text x="54" y="687" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">λ_LM ∈ {0.5, 1.5, 2.5, 3.0, 3.5, 4.5, 5.5}</text>
+<text x="54" y="706" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">4 610 decodes in 6 h 49 m (1 process:</text>
+<text x="54" y="725" font-size="13" fill="#6B7280" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">(19 GB KenLM) → cached to gen_cache.pkl.gz</text>
+<rect x="480" y="598" width="405" height="180" rx="10" fill="#E4F2E7" stroke="#3E8E57" stroke-width="1.8"/>
+<circle cx="504" cy="619" r="12" fill="#3E8E57"/><text x="504" y="624" font-size="13" font-weight="bold" fill="#fff" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">2</text>
+<text x="524" y="624" font-size="15" font-weight="bold" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Candidate pool + joint sweep</text>
+<text x="494" y="649" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">dedup over models × λ × n-best</text>
+<text x="494" y="668" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">≈ 241 hyps / val trial · ≈ 348 / test trial</text>
+<text x="494" y="687" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">sweep n-best × λ-subset: 508 combos,</text>
+<text x="494" y="706" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">5-fold session-grouped CV on A∪B</text>
+<text x="494" y="725" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">→ plateau; pinned pool kept (CV 4.99 %)</text>
+<rect x="920" y="598" width="405" height="180" rx="10" fill="#E3EBF7" stroke="#4C72B0" stroke-width="1.8"/>
+<circle cx="944" cy="619" r="12" fill="#4C72B0"/><text x="944" y="624" font-size="13" font-weight="bold" fill="#fff" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">3</text>
+<text x="964" y="624" font-size="15" font-weight="bold" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Exact features + stage-1 fusion</text>
+<text x="934" y="649" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">am = mean over models of log P_CTC(W | x)</text>
+<text x="934" y="668" font-size="13" fill="#6B7280" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">(exact sequence likelihood, not posterior avg.)</text>
+<text x="934" y="687" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">ng = KenLM ln P(W)   ·   nw = #words</text>
+<text x="934" y="706" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">s₁ = am + 2.9 · ng + 0.5 · nw</text>
+<text x="934" y="725" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">fold C: 5.96 → 4.62 %</text>
+<rect x="1360" y="598" width="405" height="180" rx="10" fill="#E4F2E7" stroke="#3E8E57" stroke-width="1.8"/>
+<circle cx="1384" cy="619" r="12" fill="#3E8E57"/><text x="1384" y="624" font-size="13" font-weight="bold" fill="#fff" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">4</text>
+<text x="1404" y="624" font-size="15" font-weight="bold" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Phonetic-neighbour expansion</text>
+<text x="1374" y="649" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">top 8 hyps: swap one word for a lexicon</text>
+<text x="1374" y="668" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">neighbour at phoneme edit distance ≤ 1</text>
+<text x="1374" y="687" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">≤ 20 neighbours / word · ≤ 600 new / trial</text>
+<text x="1374" y="706" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">pool ≈ 740 hyps · stage-1 re-tuned</text>
+<text x="1374" y="725" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">fold C: 4.62 → 3.49 %</text>
+<path d="M 445 688 L 479 688" fill="none" stroke="#374151" stroke-width="2.2" marker-end="url(#arrow)"/>
+<path d="M 885 688 L 919 688" fill="none" stroke="#374151" stroke-width="2.2" marker-end="url(#arrow)"/>
+<path d="M 1325 688 L 1359 688" fill="none" stroke="#374151" stroke-width="2.2" marker-end="url(#arrow)"/>
+<path d="M 1562.5 778 L 1562.5 839" fill="none" stroke="#374151" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="1360" y="840" width="405" height="180" rx="10" fill="#EDE8F6" stroke="#7462A8" stroke-width="1.8"/>
+<circle cx="1384" cy="861" r="12" fill="#7462A8"/><text x="1384" y="866" font-size="13" font-weight="bold" fill="#fff" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">5</text>
+<text x="1404" y="866" font-size="15" font-weight="bold" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Task-adapted LLM scoring</text>
+<text x="1374" y="891" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">shortlist: top 24 by s₁ (+ every 1-best)</text>
+<text x="1374" y="910" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Llama-3.1-8B · QLoRA nf4 · LoRA r 16</text>
+<text x="1374" y="929" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">next-word fine-tune on train transcripts</text>
+<text x="1374" y="948" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">dev NLL/token 8.20 → 3.09 (best epoch 1)</text>
+<text x="1374" y="967" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">llm = ln P_LLM(W) · fold C: 3.49 → 3.38 %</text>
+<rect x="920" y="840" width="405" height="180" rx="10" fill="#FCEEDF" stroke="#D17A3A" stroke-width="1.8"/>
+<circle cx="944" cy="861" r="12" fill="#D17A3A"/><text x="944" y="866" font-size="13" font-weight="bold" fill="#fff" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">6</text>
+<text x="964" y="866" font-size="15" font-weight="bold" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Fluency-gated log-linear fusion</text>
+<text x="934" y="891" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">f = LLM log-prob/token of the s₁-best hyp</text>
+<text x="934" y="910" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">τ = 5th percentile of f (−5.96)</text>
+<text x="934" y="929" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">f ≥ τ: s = am + 2.5 ng + 1.6 llm − 0.5 nw</text>
+<text x="934" y="948" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">f &lt; τ: s = am + 0.5 ng + 0.9 llm − 4.0 nw</text>
+<text x="934" y="967" font-size="13" fill="#6B7280" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">(weights on A∪B, gate checked on C, refit)</text>
+<rect x="480" y="840" width="405" height="128" rx="10" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.8" stroke-dasharray="7 5"/>
+<circle cx="504" cy="861" r="12" fill="#9CA3AF"/><text x="504" y="866" font-size="13" font-weight="bold" fill="#fff" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">7</text>
+<text x="524" y="866" font-size="15" font-weight="bold" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Selective GEC (optional)</text>
+<text x="494" y="891" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">LoRA corrector rewrites low-fluency /</text>
+<text x="494" y="910" font-size="13" fill="#1F2937" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">near-tie trials; re-scored with am + ng</text>
+<text x="494" y="929" font-size="13" fill="#6B7280" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">(fold C 3.11 → 3.28 % → NOT adopted)</text>
+<rect x="40" y="840" width="405" height="180" rx="10" fill="#2F3640" stroke="#2F3640" stroke-width="1.8"/>
+<circle cx="64" cy="861" r="12" fill="#2F3640"/><text x="64" y="866" font-size="13" font-weight="bold" fill="#fff" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">8</text>
+<text x="84" y="866" font-size="16" font-weight="bold" fill="#FFFFFF" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">Transcript</text>
+<text x="54" y="891" font-size="13" fill="#FFFFFF" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">argmax_W s → text</text>
+<text x="54" y="910" font-size="13" fill="#FFFFFF" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">submission.csv — 1 450 test trials</text>
+<text x="54" y="929" font-size="13" fill="#FFFFFF" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">4.4 % of test trials in the f &lt; τ regime</text>
+<text x="54" y="948" font-size="13" fill="#FFFFFF" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">27.2 % changed vs flashlight 1-best</text>
+<path d="M 1359 930 L 1326 930" fill="none" stroke="#374151" stroke-width="2.2" marker-end="url(#arrow)"/>
+<path d="M 919 1000 L 446 1000" fill="none" stroke="#374151" stroke-width="2.2" marker-end="url(#arrow)"/>
+<path d="M 919 904 L 886 904" fill="none" stroke="#9CA3AF" stroke-width="2.2" stroke-dasharray="7 5" marker-end="url(#arrowD)"/>
+<path d="M 479 904 L 446 904" fill="none" stroke="#9CA3AF" stroke-width="2.2" stroke-dasharray="7 5" marker-end="url(#arrowD)"/>
+<text x="682.5" y="993" font-size="12" fill="#6B7280" text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-style="italic">main path</text>
+<text x="24" y="1094" font-size="14" fill="#111827" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">Tuning protocol:</text>
+<text x="160" y="1094" font-size="14" fill="#374151" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">every weight is chosen on out-of-fold folds A∪B (1 142 trials) · verified once on fold C (284 trials, seen by no model and no tuner) · refit on A∪B∪C for the test submission.</text>
+<text x="24" y="1122" font-size="14" fill="#111827" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-weight="bold">Fold-C WER:</text>
+<text x="125" y="1122" font-size="14" fill="#374151" text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">greedy 44.63 %  →  flashlight 1-best 5.96 %  →  pool rescoring 4.62 %  →  + expansion 3.49 %  →  + adapted LLM 3.38 %  →  + fluency gate 3.38 %</text>
+</svg>

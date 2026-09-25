@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# Checkpoints & training artifacts
+checkpoints/*
+!checkpoints/README.md
+/logs/
+/figures/
+/tables/
+/work/
+
+# beam-search cache (decode_llm.py --gen_cache)
+gen_cache.pkl.gz*
+
+# Trial cache (13+ GB of float16) and resume state
+*_neural.f16
+*_meta.pkl
+*.done
+b2t_cache/
+b2t_resume/
+
+# KenLM build + LM artifacts
+kenlm/
+lm.arpa
+lm_fixed.arpa
+lm.binary
+lm_corpus.txt
+
+# Submission / output files
+submission/*
+!submission/README.md
+submission*.csv
+
+# Data (never commit the actual competition data)
+data/
+*.hdf5
+
+# Environment
+.venv/
+venv/
+.env
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/

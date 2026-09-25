@@ -1,0 +1,11 @@
+system,tune_A∪B_WER_%,verify_C_WER_%,all_OOF_WER_%
+greedy lexicon (1 model),42.62,44.63,43.02
+flashlight 1-best lm=3.0 (1 model),5.38,5.96,5.49
+pool rescoring: CTC-ens + KenLM + #words,4.87,4.62,4.82
++ phonetic-neighbour expansion,4.05,3.49,3.94
++ adapted LLM (no gate),3.82,3.38,3.74
++ fluency gate,3.64,3.38,3.59
+"FINAL (refit on A∪B∪C, in-sample on C)",3.67,3.11,3.56
+oracle: pool (no expansion),3.16,1.99,
+oracle: pool + expansion,2.27,1.13,
+oracle: top-24 (LLM-scored),2.69,1.56,
