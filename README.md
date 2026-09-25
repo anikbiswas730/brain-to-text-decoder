@@ -31,13 +31,13 @@ This is the modularized, repo-ready version of the Kaggle notebooks in [`noteboo
 [`results/`](results/). Source: [`assets/bts_pipeline.svg`](assets/bts_pipeline.svg), regenerate with
 `python scripts/draw_pipeline.py`.</sub>
 
-**How to read it.** Lane ① runs once per fold at training time: the cross-fit split decides which
+**How to read it.** Lane 1 runs once per fold at training time: the cross-fit split decides which
 validation trials each acoustic model may see, and each model maps 20 ms bins of neural features to
 per-frame phoneme log-probabilities. Lane ② runs per trial at decoding time: a wide beam search turns
-those posteriors into an n-best pool of word sequences (①→②), the pool is rescored by exact acoustic
-likelihood plus an n-gram prior (③), widened with near-homophone substitutions (④), shortlisted and
-scored by a task-adapted LLM (⑤), and fused with weights that depend on how fluent the utterance looks to
-the LLM (⑥). The optional generative corrector (⑦) was evaluated and rejected by the fold-C check.
+those posteriors into an n-best pool of word sequences (1→2), the pool is rescored by exact acoustic
+likelihood plus an n-gram prior (3), widened with near-homophone substitutions (4), shortlisted and
+scored by a task-adapted LLM (5), and fused with weights that depend on how fluent the utterance looks to
+the LLM (6). The optional generative corrector (7) was evaluated and rejected by the fold-C check.
 
 ---
 
