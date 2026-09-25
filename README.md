@@ -33,7 +33,7 @@ This is the modularized, repo-ready version of the Kaggle notebooks in [`noteboo
 
 **How to read it.** Lane 1 runs once per fold at training time: the cross-fit split decides which
 validation trials each acoustic model may see, and each model maps 20 ms bins of neural features to
-per-frame phoneme log-probabilities. Lane ② runs per trial at decoding time: a wide beam search turns
+per-frame phoneme log-probabilities. Lane 2 runs per trial at decoding time: a wide beam search turns
 those posteriors into an n-best pool of word sequences (1→2), the pool is rescored by exact acoustic
 likelihood plus an n-gram prior (3), widened with near-homophone substitutions (4), shortlisted and
 scored by a task-adapted LLM (5), and fused with weights that depend on how fluent the utterance looks to
