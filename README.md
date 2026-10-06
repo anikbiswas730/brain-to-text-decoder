@@ -58,11 +58,6 @@ tuning any part of the system.
 | Manuscript | In preparation |
 | Code | Will be released upon publication |
 
-## Contact
-
-Anik Biswas — anik.eee@diu.edu.bd
-
-For collaboration or academic enquiries, please get in touch by email.
 
 ## License
 
