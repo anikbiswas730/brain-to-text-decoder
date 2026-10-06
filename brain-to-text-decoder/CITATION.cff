@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "This work is in preparation for publication. Please contact the author before citing."
+title: "Brain-to-Text: Neural Speech Decoding"
+authors:
+  - family-names: Biswas
+    given-names: Anik
+    email: anik.eee@diu.edu.bd
+license: LicenseRef-All-Rights-Reserved
+date-released: "2026-10-06"
